@@ -71,16 +71,13 @@ class Monomial(object):
 
         if 'x^' in data:
             coefficient = data.split('x')[0].split('+')[-1]
-            sign = '+'
-            if coefficient and coefficient[0] in ['+', '-']:
-                sign = coefficient[0]
-                coefficient = coefficient[1:]
-
-            if coefficient and coefficient.isalnum():
-                self.coefficient = int(sign + coefficient)
+            if not coefficient:
+                self.coefficient = 1
 
             else:
-                self.coefficient = int(sign + '1')
+                sign = coefficient[0] if coefficient[0] in ['+', '-'] else '+'
+                coefficient = coefficient[1:] if coefficient[0] in ['+', '-'] else coefficient
+                self.coefficient = int(sign + coefficient)
 
             self.degree = int(data.split('^')[1].split('+')[0])
             self.literal_part = 'x^' + str(self.degree)
@@ -351,16 +348,22 @@ class Polynomial(object):
             self.repr = '0'
             return
 
-        data = data.replace(' ', '')
+        order = [' ', '^+', '^-', '+', '-', 'DEGREE_POS', 'DEGREE_SUB']
+        replaces = {' ': '',
+                    '^+': 'DEGREE_POS',
+                    '^-': 'DEGREE_SUB',
+                    '+': 'SPLIT+',
+                    '-': 'SPLIT-',
+                    'DEGREE_POS': '^+',
+                    'DEGREE_SUB': '^-'}
 
-        # Add positive sign at the beginning of the monomials
-        data = ('+' + data) if data[0] not in ['-', '+'] else data
-        data = data.replace('+', 'SPLIT+')
-        data = data.replace('-', 'SPLIT-')
+        for find in order:
+            data = data.replace(find, replaces[find])
+
         _monomials = data.split('SPLIT')
         monomials = []
         for monomial in _monomials:
-            if not monomial:
+            if monomial in ['0', '+0', '-0']:
                 continue
 
             monomials.append(monomial)
@@ -377,24 +380,57 @@ class Polynomial(object):
 
             self.monomials[monomial.degree].append(monomial)
 
+        # Good orderer of monomials by her degree
         degrees = self.monomials.keys()
+        _dict = {}
+        _list = []
+
+        for value in degrees:
+            if not abs(value) in _dict:
+                _dict[abs(value)] = []
+
+            _dict[abs(value)].append(value)
+
+        degrees = _dict.keys()
         degrees.sort()
         degrees.reverse()
+        for degree in degrees:
+            list = _dict[degree]
+            list.sort()
+            list.reverse()
 
+            for value in list:
+                _list.append(value)
+
+        degrees = _list
+
+        # Making the representation by the orderer monomials
         self.repr = ''
         for degree in degrees:
-            _monomial = Monomial('0')
+            _monomial = None
             for monomial in self.monomials[degree]:
-                #print monomial
-                _monomial += monomial
+                if not _monomial:
+                    _monomial = monomial
+
+                else:
+                    _monomial += monomial
 
             _repr = _monomial.repr
             if not _repr.startswith('+') and not _repr.startswith('-'):
                 _repr = '+' + _repr
 
-            _repr = _repr.replace('+', ' + ')
-            _repr = _repr.replace('-', ' - ')
-            _repr = _repr.replace(' + 0', '')
+            order = ['^+', '^-', '+', '-', ' + 0', 'DEGREE_POS', 'DEGREE_SUB']
+            replaces = {'^+': 'DEGREE_POS',
+                        '^-': 'DEGREE_SUB',
+                        '+': ' + ',
+                        '-': ' - ',
+                        ' + 0': '',
+                        'DEGREE_POS': '^+',
+                        'DEGREE_SUB': '^-'}
+
+            for find in order:
+                _repr = _repr.replace(find, replaces[find])
+
             self.repr += _repr
 
         if self.repr.startswith(' + '):

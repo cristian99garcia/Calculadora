@@ -660,7 +660,16 @@ class Equation(object):
         solution = '{'
 
         coefficient1 = str(float(monomial1.coefficient))
-        coefficient2 = str(abs(float(monomial2.coefficient)))
+        coefficient2 = str(float(monomial2.coefficient))
+        sign1 = monomial1.sign
+        sign2 = '+' if monomial2.sign == '-' else '-'
+
+        if sign1 != sign2:  # For signs rule
+            if sign1 == '-':
+                coefficient1 = '-' + coefficient1
+
+            if sign2 == '-':
+                coefficient2 = '-' + coefficient2
 
         if coefficient1.endswith('.0'):
             coefficient1 = coefficient1[:-2]

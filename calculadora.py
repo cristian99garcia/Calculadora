@@ -342,6 +342,7 @@ class Polynomial(object):
             '2x' = {1: ['2x']}
             '10x^14 + 5x^6 - 3x^2' = {2: ['-3x^2'], 6: ['5x^6'], 14: ['10x^14']}
         """
+        self.max_degree = 0
         if not data or not data.replace('0', '') or (data[0] in ['+', '-'] and not data[1:].replace('0', '')):
             self.monomials = {}
             self.degrees = []
@@ -432,6 +433,8 @@ class Polynomial(object):
                 _repr = _repr.replace(find, replaces[find])
 
             self.repr += _repr
+            if abs(degree) > self.max_degree:
+                self.max_degree = abs(degree)
 
         if self.repr.startswith(' + '):
             self.repr = self.repr[3:]  # 3 = len(' + ')
@@ -461,6 +464,9 @@ class Polynomial(object):
             self.repr = '-' + self.repr[3:]
 
         self.parse_string(self.repr)  # For when use string and not use Monomial
+
+    def get_max_degree(self):
+        return self.max_degree
 
     def __repr__(self):
         return self.repr
@@ -544,27 +550,38 @@ class Polynomial(object):
                 yield monomial
 
 
-class Ecuation(object):
+class Equation(object):
     """
     **************************
-    ****** LACK FICNISH ******
+    ****** LACK FINISH ******
     **************************
 
-    A ecuations resolver, is necesary a ecuation.
+    A Equations resolver, is necesary a Equation.
     You can pass as an argument polynomial (which is supposed to be a
-    ranked ecuation 0)
+    ranked Equation 0)
     Example:
         >>> p = Polynomial('3x^2-3x+10')
-        >>> e = Ecuation(p)
+        >>> e = Equation(p)
 
     You can also take a string as an argument, unmatched or matched to any
     number (if not be matched, will be taken as equated to 0)
     Example:
         >>> p = '3x^2-3x+10'
-        >>> e = Ecuation(p)
+        >>> e = Equation(p)
 
-        >>> p = '3x^2+10=3x'  # This is equivalent to '3x^2-3x+10=0'
-        >>> e = Ecuation(p)
+        >>> p = '3x^2+10=3x'  # This is equivalent to '3x^2 - 3x + 10 = 0'
+        >>> e = Equation(p)
+
+    Solve Equations:
+        1° degree:
+            # General expresion: ax = b
+            >>> e = Equation('5x + 8 = 100')
+            >>> e.solve()
+            {92/5} = {18.4}
+
+            >>> e = Ecuation('2x + 10')
+            >>> e.solve()
+            {10/2} = {5}
     """
     def __init__(self, data):
 
@@ -572,36 +589,98 @@ class Ecuation(object):
         self.parse_data(data)
 
     def parse_data(self, data):
+        # Get a string for both polynomials
+        if type(data) == str:
+            if '=' in data:
+                data = data.split('=')
+
+            else:
+                data = (data, '0')
+
+        elif type(data) in [Polynomial, Monomial]:
+            data = (data.repr, '0')
+
         if type(data) in [tuple, list] and len(data) == 2:
             polynomial1, polynomial2 = data
-            if type(polynomial1) == type(polynomial2):
-                if type(polynomial1) == str:
-                    if polynomial2.strip() != '0':
-                        polynomial1 += '-(%s)' % polynomial2
 
-                    self.polynomial = Polynomial(polynomial1)
+            if type(polynomial1) in [Polynomial, Monomial]:
+                polynomial1 = polynomial1.repr.replace(' ', '')
 
-                elif type(polynomial1) == Polynomial:
-                    if str(polynomial2).strip() != '0':
-                        self.polynomial = Polynomial(polynomial1) - Polynomial(polynomial2)
+            elif type(polynomial1) == int:
+                polynomial = str(polynomial1)
 
-                    else:
-                        self.polynomial = polynomial1
+            elif type(polynomial1) != str:
+                # 'error', polynomial1
+                pass
 
-        elif type(data) == str:
-            data = data.replace(' ', '')
-            if not '=' in data:
-                self.polynomial = Polynomial(data)
+            if type(polynomial2) in [Polynomial, Monomial]:
+                polynomial2 = polynomial2.repr.replace(' ', '')
 
-            elif '=' in data and data.count('=') == 1:
-                polynomial1, polynomial2 = data.split('=')
-                if polynomial2.strip() != '0':
-                    polynomial1 += '-(%s)' % polynomial2
+            elif type(polynomial2) == int:
+                polynomial = str(polynomial2)
 
-                self.polynomial = Polynomial(polynomial1)
+            elif type(polynomial2) != str:
+                # 'error', polynomial2
+                pass
 
-        elif type(data) == Polynomial:
-            self.polynomial = data
+        # Convert two polynomials in one
+        if polynomial2.strip() != '0':
+            polynomial2 = polynomial2.replace('-', 'ADD')
+            polynomial2 = polynomial2.replace('+', 'SUB')
+            polynomial2 = polynomial2.replace('ADD', '+')
+            polynomial2 = polynomial2.replace('SUB', '-')
+
+            if polynomial2 and polynomial2[0] not in ['+', '-']:
+                polynomial2 = '-' + polynomial2
+
+            polynomial1 += polynomial2
+
+        # Make a Polynomial instance for futures operations
+        self.polynomial = Polynomial(polynomial1)
+        self.repr = self.polynomial.repr + ' = 0'
+        self.degree = self.polynomial.get_max_degree()
+
+    def solve(self):
+        if self.degree == 1:
+            return self.__solve_with_1_degree_methods()
+
+    def __solve_with_1_degree_methods(self):
+        polynomial = self.polynomial.repr.replace(' ', '')
+        polynomial = polynomial.replace('+', 'SPLIT+')
+        polynomial = polynomial.replace('-', 'SPLIT-')
+        monomials = []
+        _monomials = polynomial.split('SPLIT')
+        for monomial in _monomials:
+            if monomial:
+                monomials.append(monomial)
+
+        monomial1, monomial2 = monomials
+        monomial1 = Monomial(monomial1)
+        monomial2 = Monomial(monomial2)
+        solution = '{'
+
+        coefficient1 = str(float(monomial1.coefficient))
+        coefficient2 = str(abs(float(monomial2.coefficient)))
+
+        if coefficient1.endswith('.0'):
+            coefficient1 = coefficient1[:-2]
+
+        if coefficient2.endswith('.0'):
+            coefficient2 = coefficient2[:-2]
+
+        r = str(float(coefficient2) / float(coefficient1)).split('.')
+        r = r[0] + '.' + r[1]
+        if len(r.split('.')[1]) > 2:
+            other_solution = ''
+
+        else:
+            if r.endswith('.0'):
+                r = r[:-2]
+
+            other_solution = ' = {%s}' % (r)
+
+        solution += coefficient2 + '/' + coefficient1 + '}' + other_solution
+        return solution
 
     def __repr__(self):
-        return self.polynomial.repr + ' = 0'
+        return self.repr

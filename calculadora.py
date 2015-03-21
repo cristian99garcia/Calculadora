@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2015, Cristian García <cristian99garcia@gmail.com>
@@ -16,6 +16,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+def square_root(number):
+    number = float(number)
+    root = number
+    i = 0
+    while i != root:
+        i = root
+        root = (number / root + root) / 2
+
+    return root
 
 
 class Monomial(object):
@@ -382,7 +392,10 @@ class Polynomial(object):
             self.monomials[monomial.degree].append(monomial)
 
         # Good orderer of monomials by her degree
-        degrees = self.monomials.keys()
+        degrees = []
+        for degree in self.monomials.keys():
+            degrees.append(degree)
+
         _dict = {}
         _list = []
 
@@ -392,7 +405,11 @@ class Polynomial(object):
 
             _dict[abs(value)].append(value)
 
-        degrees = _dict.keys()
+        _degrees = _dict.keys()
+        degrees = []
+        for degree in _degrees:
+            degrees.append(degree)
+
         degrees.sort()
         degrees.reverse()
         for degree in degrees:
@@ -536,7 +553,10 @@ class Polynomial(object):
         return bool(self.monomials)
 
     def __iter__(self):
-        degrees = self.monomials.keys()
+        degrees = []
+        for degree in self.monomials.keys():
+            degrees.append(degree)
+
         degrees.sort()
         degrees.reverse()
         for degree in degrees:
@@ -641,10 +661,28 @@ class Equation(object):
         self.degree = self.polynomial.get_max_degree()
 
     def solve(self):
+        """
+        Gets the degree of the equation and select the appropriate resolution
+        """
         if self.degree == 1:
             return self.__solve_with_1_degree_methods()
 
+        elif self.degree == 2:
+            return self.__solve_with_2_degree_methods()
+
+        return None
+
     def __solve_with_1_degree_methods(self):
+        """
+        Basic method of solving linear equations with one unknown:
+            e = 3x - 10 = 2
+
+            By the clearance method:
+            3x = 2 + 10  --> 3x = 12
+            x = 12 / 3
+            x = 4
+            S = {4}
+        """
         polynomial = self.polynomial.repr.replace(' ', '')
         polynomial = polynomial.replace('+', 'SPLIT+')
         polynomial = polynomial.replace('-', 'SPLIT-')
@@ -690,6 +728,67 @@ class Equation(object):
 
         solution += coefficient2 + '/' + coefficient1 + '}' + other_solution
         return solution
+
+    def __solve_with_2_degree_methods(self):
+        """
+        Quadratic equation
+        """
+        monomials = self.polynomial.monomials
+        if 0 in monomials and 1 in monomials and 2 in monomials:
+            # Is a complete second degree equation, apply bhaskaras and get
+            # two values
+            # Example of a cuadratic complete equation:
+            #   x^2 -9x + 8 = 0
+
+            a = float('%s%d' % (monomials[2][0].sign, monomials[2][0].coefficient))
+            b = float('%s%d' % (monomials[1][0].sign, monomials[1][0].coefficient))
+            c = float('%s%d' % (monomials[0][0].sign, monomials[0][0].coefficient))
+            delta = (b ** 2) - (4 * a * c)
+
+            if delta < 0:
+                # Is impossible to calculate the square root of a
+                # negative number, empty solution.
+                return 'Ø'
+
+            # Calculating square root without 'math' module
+            root = square_root(delta)
+            x1 = (-b + root) / (2 * a)  # Positive root
+            x2 = (-b - root) / (2 * a)  # Negative root
+            return '{(%f; %f)}' % (float(x1), float(x2))
+
+        # Incomplete equations
+        elif 0 not in monomials and 1 not in monomials and 2 in monomials:
+            # 2x^2 = 0
+            return '{(0, 0)}'
+
+        elif 0 not in monomials and 1 in monomials and 2 in monomials:
+            # x^2 - 5x = 0
+            # x(x - 5) = 0
+            # Case 1:
+            #   x = 0
+            # Case 2:
+            #   x - 5 = 0
+            #   x = 5
+            x1 = 0
+            monomial = monomials[1][0]
+            x2 = -int('%s%d' % (monomial.sign, monomial.coefficient))
+            return '{(%d, %d)}' % (x1, x2)
+
+        elif 0 in monomials and 1 not in monomials and 2 in monomials:
+            # x^2 - 25 = 0
+            # x^2 = 25
+            # x = +- SquareRoot(25)
+            # x1 = 5
+            # x2 = -5
+            monomial1 = monomials[2][0]
+            monomial2 = monomials[0][0]
+            if monomial1.sign == monomial2.sign:
+                return 'Ø'
+
+            root = square_root(monomial2.coefficient)
+            return '{(%d, %d)}' % (root, -root)
+
+        return None
 
     def __repr__(self):
         return self.repr

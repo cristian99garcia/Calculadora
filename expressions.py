@@ -17,15 +17,7 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
-def square_root(number):
-    number = float(number)
-    root = number
-    i = 0
-    while i != root:
-        i = root
-        root = (number / root + root) / 2
-
-    return root
+import globals as G
 
 
 class Monomial(object):
@@ -78,6 +70,7 @@ class Monomial(object):
         """
         data = data.replace('**', '^')
         data = data.replace(' ', '')
+        _repr = None
 
         if 'x^' in data:
             coefficient = data.split('x')[0].split('+')[-1]
@@ -87,9 +80,17 @@ class Monomial(object):
             else:
                 sign = coefficient[0] if coefficient[0] in ['+', '-'] else '+'
                 coefficient = coefficient[1:] if coefficient[0] in ['+', '-'] else coefficient
-                self.coefficient = int(sign + coefficient)
+                try:
+                    self.coefficient = int(sign + coefficient)
+                except:
+                    self.coefficient = 0
+                    _repr = data
 
-            self.degree = int(data.split('^')[1].split('+')[0])
+            try:
+                self.degree = int(data.split('^')[1].split('+')[0])
+            except:
+                self.degree = 0
+
             self.literal_part = 'x^' + str(self.degree)
 
         elif 'x' in data and not '^' in data:
@@ -102,10 +103,10 @@ class Monomial(object):
                 sign = '+'
 
             if coefficient and coefficient.isalnum():
-                self.coefficient = int(sign + coefficient)
+                self.coefficient = float(sign + coefficient)
 
             else:
-                self.coefficient = int(sign + '1')
+                self.coefficient = float(sign + '1')
 
             self.degree = 1
             self.literal_part = 'x'
@@ -115,7 +116,7 @@ class Monomial(object):
                 data = data.replace('^', '**')
 
             try:
-                self.coefficient = int(eval(data))
+                self.coefficient = float(eval(data))
             except:
                 self.coefficient = 0
 
@@ -129,24 +130,28 @@ class Monomial(object):
         elif self.coefficient >= 0:
             self.sign = '+'
 
-        self.repr = '%s%d%s' % (self.sign, self.coefficient, self.literal_part)
-        if self.repr.startswith('+0x'):
-            self.repr = '0'
-            self.coefficient = 0
-            self.literal_part = ''
-            self.sign = '+'
+        if not _repr:
+            self.repr = '%s%d%s' % (self.sign, self.coefficient, self.literal_part)
+            if self.repr.startswith('+0x'):
+                self.repr = '0'
+                self.coefficient = 0
+                self.literal_part = ''
+                self.sign = '+'
+
+        else:
+            self.repr = _repr
+
+        if int(self.coefficient) == self.coefficient:
+            self.coefficient = int(self.coefficient)
 
     def __str__(self):
         return self.repr[1:] if self.repr.startswith('+') else self.repr
 
     def __eq__(self, monomial):
-        if type(monomial) == int:
-            monomial = str(monomial)
+        if type(monomial) in [str, int]:
+            monomial = Monomial(str(monomial))
 
-        if type(monomial) == str:
-            monomial = Monomial(monomial)
-
-        elif type(monomial) != Monomial:
+        if type(monomial) != Monomial:
             return False
 
         return self.repr == monomial.repr
@@ -161,13 +166,10 @@ class Monomial(object):
         return Monomial(self.repr.replace('+', '-'))
 
     def __add__(self, monomial):
-        if type(monomial) == int:
-            monomial = str(monomial)
+        if type(monomial) in [str, int]:
+            monomial = Monomial(str(monomial))
 
-        if type(monomial) == str:
-            monomial = Monomial(monomial)
-
-        elif not type(monomial) == Monomial:
+        if type(monomial) != Monomial:
             raise TypeError("cannot concatenate 'Monomial' + %s objects" % str(type(monomial))[6:-1])
 
         if self.degree == monomial.degree:
@@ -227,33 +229,53 @@ class Monomial(object):
             return Polynomial(_repr)
 
     def __mul__(self, monomial):
-        if type(monomial) == str:
-            monomial = str(monomial)
+        if type(monomial) in [str, int]:
+            monomial = Monomial(str(monomial))
 
-        if type(monomial) == str:
-            monomial = Monomial(monomial)
+        coefficient = monomial.coefficient * self.coefficient
+        degree = monomial.degree + self.degree
+        if degree == 0:
+            return Monomial(str(coefficient))
 
-        if self.degree == monomial.degree:
-            coefficient1 = self.coefficient
-            coefficient2 = monomial.coefficient
-            if self.sign == '-':
-                coefficient1 *= -1
-
-            if monomial.sign == '-':
-                coefficient2 *= -1
-
-            coefficient = coefficient1 * coefficient2
-            degree = self.degree + monomial.degree
-            if degree > 1:
-                literal_part = 'x^%d' % degree
-
-            else:
-                literal_part = ''
-
-            return Monomial(str(coefficient) + literal_part)
+        elif degree == 1:
+            return Monomial(str(coefficient) + 'x')
 
         else:
-            return Polynomial(self.repr + '*' + monomial.repr)
+            return Monomial(str(coefficient) + 'x^' + str(degree))
+
+    def __div__(self, monomial):
+        if type(monomial) in [str, int]:
+            monomial = Monomial(str(monomial))
+
+        degree = self.degree - monomial.degree
+        if monomial.coefficient == self.coefficient:
+            if degree == 1:
+                return Monomial('x')
+
+            else:
+                return Monomial('x^%d' % degree)
+
+        elif self.coefficient == 1 and monomial.coefficient != 1:
+            if degree == 1:
+                _monomial = '(x)'
+
+            else:
+                _monomial = '(x^%d)' % degree
+
+            _monomial += '/%d' % monomial.coefficient
+            return Monomial(_monomial)
+
+        else:
+            coefficient = self.coefficient / monomial.coefficient
+            if degree == 1:
+                _coefficient = str(coefficient) if coefficient != 1 else ''
+                return Monomial('%sx' % _coefficient)
+
+            elif degree == 0:
+                return Monomial(coefficient)
+
+            else:
+                return Monomial('%dx^%d' % (coefficient, degree))
 
     def __pow__(self, other):
         if type(other) != int:
@@ -286,10 +308,17 @@ class Monomial(object):
         return self.repr not in ['-0', '0', '+0']
 
     def __repr__(self):
-        if self.repr.startswith('+'):
-            return self.repr[1:]
+        _repr = self.repr
+        if _repr.startswith('+'):
+            _repr = _repr[1:]
 
-        return self.repr
+        if _repr.startswith('1x'):
+            _repr = _repr[1:]
+
+        if _repr.startswith('-1x'):
+            _repr = '-x' + _repr[3:]
+
+        return _repr
 
 
 class Polynomial(object):
@@ -573,7 +602,7 @@ class Polynomial(object):
 class Equation(object):
     """
     **************************
-    ****** LACK FINISH ******
+    ****** LACK FINISH *******
     **************************
 
     A Equations resolver, is necesary a Equation.
@@ -602,10 +631,22 @@ class Equation(object):
             >>> e = Ecuation('2x + 10')
             >>> e.solve()
             {10/2} = {5}
+
+        2° degree:
+            1° Case:
+                >>> e = Equation('x^2 -9x + 8 = 0')
+                >>> e.solve()
+                {(8, 1)}
+
+            2° Case:
+            3° Case:
+            4° Case:
+
     """
     def __init__(self, data):
 
         self.polynomial = None
+        self.repr_solution = ''
         self.parse_data(data)
 
     def parse_data(self, data):
@@ -727,7 +768,8 @@ class Equation(object):
             other_solution = ' = {%s}' % (r)
 
         solution += coefficient2 + '/' + coefficient1 + '}' + other_solution
-        return solution
+        self.repr_solution = solution
+        return float(self.repr_solution.split(' = ')[1].replace('{', '').replace('}', ''))
 
     def __solve_with_2_degree_methods(self):
         """
@@ -748,18 +790,20 @@ class Equation(object):
             if delta < 0:
                 # Is impossible to calculate the square root of a
                 # negative number, empty solution.
-                return 'Ø'
+                self.repr_solution = 'Ø'
 
             # Calculating square root without 'math' module
-            root = square_root(delta)
+            root = G.square_root(delta)
             x1 = (-b + root) / (2 * a)  # Positive root
             x2 = (-b - root) / (2 * a)  # Negative root
-            return '{(%f; %f)}' % (float(x1), float(x2))
+            self.repr_solution = '{(%f; %f)}' % (float(x1), float(x2))
+            return [float(x1), float(x2)]
 
         # Incomplete equations
         elif 0 not in monomials and 1 not in monomials and 2 in monomials:
             # 2x^2 = 0
-            return '{(0, 0)}'
+            self.repr_solution = '{(0, 0)}'
+            return [0, 0]
 
         elif 0 not in monomials and 1 in monomials and 2 in monomials:
             # x^2 - 5x = 0
@@ -769,10 +813,11 @@ class Equation(object):
             # Case 2:
             #   x - 5 = 0
             #   x = 5
-            x1 = 0
             monomial = monomials[1][0]
+            x1 = 0
             x2 = -int('%s%d' % (monomial.sign, monomial.coefficient))
-            return '{(%d, %d)}' % (x1, x2)
+            self.solution_repr = '%d; %d' % (x1, x2)
+            return [x1, x2]
 
         elif 0 in monomials and 1 not in monomials and 2 in monomials:
             # x^2 - 25 = 0
@@ -783,12 +828,111 @@ class Equation(object):
             monomial1 = monomials[2][0]
             monomial2 = monomials[0][0]
             if monomial1.sign == monomial2.sign:
-                return 'Ø'
+                self.repr_solution = 'Ø'
+                return None
 
-            root = square_root(monomial2.coefficient)
-            return '{(%d, %d)}' % (root, -root)
+            root = G.square_root(monomial2.coefficient)
+            self.repr = '{(%f, %f)}' % (float(root), float(-root))
+            return [root, -root]
 
         return None
+
+    def __repr__(self):
+        return self.repr
+
+
+class Function(object):
+    def __init__(self, polynomial):
+
+        if type(polynomial) == Monomial:
+            polynomial = polynomial.repr
+
+        if type(polynomial) == str:
+            if polynomial.startswith('f(x) = '):
+                polynomial = polynomial[7:]
+
+            _repr = polynomial
+            self.polynomial = Polynomial(polynomial)
+
+        elif type(polynomial) == Polynomial:
+            _repr = polynomial.repr
+            self.polynomial = polynomial
+
+        self.repr = 'f(x) = %s' % _repr
+        self.degree = self.polynomial.get_max_degree()
+        self.independent_term = 0
+
+        if 0 in self.polynomial.monomials:
+            monomial = self.polynomial.monomials[0][0]
+            self.independent_term = monomial.coefficient
+            if monomial.sign == '-':
+                self.independent_term *= -1
+
+    def to_graph(self):
+        if self.degree == 1:
+            pass
+
+    def __repr__(self):
+        return self.repr
+
+    def __call__(self, value=0):
+        _repr = self.polynomial.repr.replace('^', '**')
+        for x in range(0, 10):
+            _repr = _repr.replace('%dx' % x, '%d*x' % x)
+
+        _repr = _repr.replace('x', str(value))
+        return str(eval(_repr))
+
+
+class Expression(object):
+    """
+    **************************
+    ****** LACK FINISH *******
+    **************************
+
+    A class that handles deduce what a mathematical expression that is passed
+    as an argument is.
+    """
+
+    def __init__(self, data):
+        # FIXME: Add mathematical functions detector
+
+        if type(data) in [Monomial, Polynomial, Equation, Function]:
+            data = data.repr
+
+        elif type(data) in [int, float]:
+            data = str(data)
+
+        if type(data) != str:
+            raise TypeError('Type unknown')
+
+        if '=' in data:
+            if data.startswith('f(x)'):
+                self.obj = Function(data)
+                self.repr = self.obj.repr
+
+            else:
+                self.obj = Equation(data)
+                self.repr = self.obj.repr + '   S={%s}' % str(self.obj.solve())
+
+        else:
+            self.obj = Polynomial(data)
+            self.repr = self.obj.repr
+
+    def is_monomial(self):
+        return type(self.obj) == Monomial
+
+    def is_polynomial(self):
+        return type(self.obj) == Polynomial
+
+    def is_equation(self):
+        return type(self.obj) == Equation
+
+    def is_function(self):
+        return type(self.obj) == Function
+
+    def __str__(self):
+        return self.repr
 
     def __repr__(self):
         return self.repr

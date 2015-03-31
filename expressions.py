@@ -899,10 +899,14 @@ class Expression(object):
         if type(data) != str:
             raise TypeError('Type unknown')
 
-        try:
-            data = G.simplify(data)
-        except:
-            raise SyntaxError('Bad string, "%s"' % data)
+        if not 'x' in data:
+            try:
+                data = G.simplify(data)
+            except:
+                raise SyntaxError('Bad string, "%s"' % data)
+
+        else:
+            data = G.clean_string(data)
 
         if '=' in data:
             if data.startswith('f(x)'):

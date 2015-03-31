@@ -19,9 +19,12 @@ OPERATOR_MUL = '×'
 OPERATOR_ADD = '+'
 OPERATOR_SUB = '-'
 OPERATORS = [OPERATOR_DIV,
-              OPERATOR_MUL,
-              OPERATOR_ADD,
-              OPERATOR_SUB]
+             OPERATOR_MUL,
+             OPERATOR_ADD,
+             OPERATOR_SUB]
+
+SPECIAL_FUNCTIONS = ['sin', 'cos', 'tan', 'In', 'log', 'factorial']
+SPECIAL_OPERATORS = {'!': 'factorial'}
 
 
 def clean_string(text):
@@ -63,7 +66,7 @@ def degrees_to_radians(x):
     return x / 180.0 * PI
 
 
-def sen(x, in_radians=False):
+def sin(x, in_radians=False):
     """
     # sen x = x - x ^ 3/3! + x ^ 5/5! - x ^ 7/7! ...
     if not in_radians:
@@ -79,7 +82,7 @@ def sen(x, in_radians=False):
 
     return eval(string)
     """
-    return math.sen(x)
+    return math.sin(x)
 
 
 def cos(x):
@@ -96,3 +99,45 @@ def In(x):
 
 def log(x):
     return math.log(x)
+
+
+def simplify(data):
+    data = clean_string(data)
+    data = data.replace('+', 'SPLIT+')
+    data = data.replace('-', 'SPLIT-')
+    _monomials = data.split('SPLIT')
+    monomials = []
+    final = ''
+    for monomial in _monomials:
+        if not monomial:
+            continue
+
+        has_operator = False
+
+        for operator in list(SPECIAL_OPERATORS.keys()):
+            if operator in monomial:
+                has_operator = True
+
+                _number = monomial.split(operator)[0]
+                n = -1
+                number = ''
+                while True:
+                    if not _number[n].isalnum():
+                        break
+
+                    number = _number[n] + number
+                    n -= 1
+
+                monomials.append(monomial.replace(number + operator, str(eval('%s(%s)' % (SPECIAL_OPERATORS[operator], number)))))
+
+        if not has_operator:
+            monomials.append(str(eval(monomial)))
+
+    for x in monomials:
+        if x[0] not in ['+', '-']:
+            x = '+' + x
+
+        x = str(eval(x))
+        final += ('+' if not x[0] in ['+', '-'] else '') + x
+
+    return str(eval(final))

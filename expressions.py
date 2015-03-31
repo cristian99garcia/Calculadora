@@ -81,13 +81,13 @@ class Monomial(object):
                 sign = coefficient[0] if coefficient[0] in ['+', '-'] else '+'
                 coefficient = coefficient[1:] if coefficient[0] in ['+', '-'] else coefficient
                 try:
-                    self.coefficient = int(sign + coefficient)
+                    self.coefficient = float(sign + coefficient)
                 except:
                     self.coefficient = 0
                     _repr = data
 
             try:
-                self.degree = int(data.split('^')[1].split('+')[0])
+                self.degree = float(data.split('^')[1].split('+')[0])
             except:
                 self.degree = 0
 
@@ -112,6 +112,7 @@ class Monomial(object):
             self.literal_part = 'x'
 
         elif not 'x' in data:
+            _repr = str(data)
             if '^' in data:
                 data = data.replace('^', '**')
 
@@ -141,8 +142,8 @@ class Monomial(object):
         else:
             self.repr = _repr
 
-        if int(self.coefficient) == self.coefficient:
-            self.coefficient = int(self.coefficient)
+        if self.repr.startswith('.'):
+            self.repr = '0' + self.repr
 
     def __str__(self):
         return self.repr[1:] if self.repr.startswith('+') else self.repr
@@ -204,8 +205,6 @@ class Monomial(object):
 
                 else:
                     return Monomial(monomial.repr)
-
-                #return Polynomial(data)
 
     def __sub__(self, monomial):
         if type(monomial) == Monomial:
@@ -282,7 +281,7 @@ class Monomial(object):
             raise TypeError("unsupported operand type(s) for ** or pow(): 'Monomial' and %s" % str(type(other))[6:-1])
 
         if self.degree == 0:
-            return Monomial(str(int(self.repr) ** other))
+            return Monomial(str(float(self.repr) ** other))
 
         elif self.degree == 1:
             return Monomial(self.repr + '^' + str(other))
@@ -815,7 +814,7 @@ class Equation(object):
             #   x = 5
             monomial = monomials[1][0]
             x1 = 0
-            x2 = -int('%s%d' % (monomial.sign, monomial.coefficient))
+            x2 = -float('%s%d' % (monomial.sign, monomial.coefficient))
             self.solution_repr = '%d; %d' % (x1, x2)
             return [x1, x2]
 
@@ -886,17 +885,11 @@ class Function(object):
 
 class Expression(object):
     """
-    **************************
-    ****** LACK FINISH *******
-    **************************
-
     A class that handles deduce what a mathematical expression that is passed
     as an argument is.
     """
 
     def __init__(self, data):
-        # FIXME: Add mathematical functions detector
-
         if type(data) in [Monomial, Polynomial, Equation, Function]:
             data = data.repr
 
@@ -905,6 +898,11 @@ class Expression(object):
 
         if type(data) != str:
             raise TypeError('Type unknown')
+
+        try:
+            data = G.simplify(data)
+        except:
+            raise SyntaxError('Bad string, "%s"' % data)
 
         if '=' in data:
             if data.startswith('f(x)'):
@@ -918,9 +916,6 @@ class Expression(object):
         else:
             self.obj = Polynomial(data)
             self.repr = self.obj.repr
-
-    def is_monomial(self):
-        return type(self.obj) == Monomial
 
     def is_polynomial(self):
         return type(self.obj) == Polynomial

@@ -30,6 +30,7 @@ EXPRESSIONS = [['**', '^'],
                ['π', str(PI)]]
 
 SYMBOL_DEL = 'DEL'
+SYMBOL_INFINITY = '∞'
 OPERATOR_DIV = '÷'
 OPERATOR_MUL = '×'
 OPERATOR_ADD = '+'

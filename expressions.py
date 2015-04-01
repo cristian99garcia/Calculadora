@@ -20,6 +20,80 @@
 import globals as G
 
 
+class Infinity(object):
+    def __init__(self, symbol=G.SYMBOL_INFINITY):
+
+        if len(symbol) == 2 and symbol[0] in ['-', '+'] and symbol[1] == G.SYMBOL_INFINITY:
+            self.symbol = symbol
+
+        elif len(symbol) == 1 and symbol in ['-', '+']:
+            self.symbol = symbol + G.SYMBOL_INFINITY
+
+        else:
+            self.symbol = G.SYMBOL_INFINITY
+
+    def __repr__(self):
+        return self.symbol
+
+    def __str__(self):
+        return self.symbol
+
+    def __add__(self, other):
+        return Infinity()
+
+    def __sub__(self, other):
+        i = Infinity(self.symbol)
+        return -i if type(other) == Infinity else i
+
+    def __mul__(self, other):
+        return Infinity()
+
+    def __div__(self, other):
+        return Infinity()
+
+    def __pow__(self, other):
+        return Infinity()
+
+    def __eq__(self, other):
+        return type(other) == Infinity
+
+    def __ne__(self, other):
+        return type(other) != Infinity
+
+    def __lt__(self, other):
+        return type(other) != Infinity
+
+    def __gt__(self, other):
+        return type(other) != Infinity
+
+    def __le__(self, other):
+        return type(other) == Infinity
+
+    def __ge__(self, other):
+        return True
+
+    def __or__(self, other):
+        return True
+
+    def __or__(self, other):
+        return bool(other)
+
+    def __pos__(self):
+        return Infinity('+')
+
+    def __neg__(self):
+        return Infinity('-')
+
+    def __invert__(self):
+        if self.symbol[0] in ['-', '+']:
+            sign = '-' if self.symbol[0] == '+' else '+'
+
+        else:
+            sign = '-'
+
+        return Infinity(sign)
+
+
 class Monomial(object):
     """
     A simple monomial

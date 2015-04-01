@@ -21,6 +21,7 @@ import cairo
 
 from gi.repository import Gtk
 from gi.repository import Gdk
+from gi.repository import Pango
 from gi.repository import GObject
 
 from expressions import Monomial
@@ -250,13 +251,21 @@ class Entry(Gtk.ScrolledWindow):
 
     __gtype_name__ = 'Entry'
 
-    def __init__(self):
+    def __init__(self, sugar=False):
         Gtk.ScrolledWindow.__init__(self)
 
         self.__view = Gtk.TextView()
         self.__buffer = self.__view.get_buffer()
 
-        self.set_size_request(-1, 45)
+        font = 'Bold 25' if not sugar else 'Bold 60'
+        size = 45 if not sugar else 100
+        self.__view.modify_font(Pango.FontDescription(font))
+        self.__view.modify_bg(Gtk.StateType.NORMAL, Gdk.color_parse('#303030'))
+        self.__view.modify_fg(Gtk.StateType.NORMAL, Gdk.color_parse('#CCCCCC'))
+        self.__view.modify_bg(Gtk.StateType.SELECTED, Gdk.color_parse('#AAAAAA'))
+        self.__view.modify_fg(Gtk.StateType.SELECTED, Gdk.color_parse('#FFFFFF'))
+
+        self.set_size_request(-1, size)
         self.add_events(Gdk.EventMask.KEY_RELEASE_MASK)
         self.connect('key-release-event', self.__key_release_event_cb)
         self.__buffer.connect('changed', self.__changed_cb)

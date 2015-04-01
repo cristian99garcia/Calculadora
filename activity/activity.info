@@ -1,0 +1,9 @@
+[Activity]
+name = MDCalculator
+activity_version = 1
+bundle_id = org.laptop.MDCalculator
+exec = sugar-activity sugarcalculator.Calculator
+icon = activity-terminal
+mime_types =
+license = GPLv3+
+repository = git@github.com:cristian99garcia/Calculadora.git

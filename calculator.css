@@ -6,12 +6,8 @@ GtkTextView {
     border-width: 0px;
     border-radius: 0px;
     border-style: solid;
-    border-image-width: 0px;
-
-    font: Bold 25px;
-    color: #CCCCCC;
-    background-color: #303030;
     background-image: none;
+    border-image-width: 0px;
 }
 
 GtkWindow {

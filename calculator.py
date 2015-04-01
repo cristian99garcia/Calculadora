@@ -163,8 +163,6 @@ class Calculator(Gtk.Window):
         buttonbox.add(button2)
 
         self.area = GraphArea()
-        #self.area.add_function('f(x) = 10x - 2')
-        self.area.add_function('2x - 2')
 
         vbox = Gtk.VBox()
         vbox.add(self.area)

@@ -25,6 +25,7 @@ from gi.repository import Gdk
 from expressions import Expression
 
 from widgets import Entry
+from widgets import GraphArea
 from widgets import ButtonSimple
 from widgets import ButtonOperator
 from widgets import ButtonSpecial
@@ -161,8 +162,14 @@ class Calculator(Gtk.Window):
         buttonbox.add(button1)
         buttonbox.add(button2)
 
-        #button1.set_name('RadioButton')
-        #button2.set_name('RadioButton')
+        self.area = GraphArea()
+        #self.area.add_function('f(x) = 10x - 2')
+        self.area.add_function('2x - 2')
+
+        vbox = Gtk.VBox()
+        vbox.add(self.area)
+
+        self.stack.add_titled(vbox, 'graph', 'Graph')
 
     def make_button(self, label, _class=None):
         button = _class(label) if _class else Gtk.Button(label)

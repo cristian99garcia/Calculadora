@@ -954,7 +954,7 @@ class Function(object):
             _repr = _repr.replace('%dx' % x, '%d*x' % x)
 
         _repr = _repr.replace('x', str(value))
-        return str(eval(_repr))
+        return float(eval(_repr))
 
 
 class Expression(object):

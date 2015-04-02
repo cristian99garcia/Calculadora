@@ -66,12 +66,14 @@ class GraphArea(Gtk.DrawingArea):
         self.max_x = 0
         self.min_y = 0
         self.max_y = 0
+        self.menu = None
+        self.f_cursor_pos = (0.0, 0.0)
+        self.i_cursor_pos = (0, 0)
 
-        self.set_can_focus(True)
         self.add_events(Gdk.EventMask.SCROLL_MASK |
                         Gdk.EventMask.BUTTON_PRESS_MASK |
                         Gdk.EventMask.BUTTON_RELEASE_MASK |
-                        Gdk.EventMask.BUTTON_MOTION_MASK)
+                        Gdk.EventMask.POINTER_MOTION_MASK)
 
         self.connect('scroll-event', self.__scroll_event_cb)
         self.connect('button-press-event', self.__button_press_event_cb)
@@ -93,12 +95,23 @@ class GraphArea(Gtk.DrawingArea):
         GObject.idle_add(self.queue_draw)
 
     def __button_press_event_cb(self, widget, event):
-        self.drag_point = (event.x - self.init_x, event.y - self.init_y)
+        if event.button == 1:
+            self.drag_point = (event.x - self.init_x, event.y - self.init_y)
+
+        elif event.button == 3:
+            self.make_menu(event.x, event.y)
+            self.menu.popup(None, None, None, None, event.button, event.time)
+            return True
 
     def __button_release_event_cb(self, widget, event):
         self.drag_point = None
 
     def __button_motion_event_cb(self, widget, event):
+        fx = (self.width / 2.0 + self.init_x - event.x) / -self.unit_space
+        fy = (self.height / 2.0 + self.init_y - event.y) / self.unit_space
+        self.f_cursor_pos = (fx, fy)
+        self.i_cursor_pos = (int(round(fx)), int(round(fy)))
+
         if self.drag_point:
             self.init_x = event.x - self.drag_point[0]
             self.init_y = event.y - self.drag_point[1]
@@ -113,6 +126,37 @@ class GraphArea(Gtk.DrawingArea):
 
         self.render()
 
+    def make_menu(self, x, y):
+        fx, fy = self.f_cursor_pos
+        ix, iy = self.i_cursor_pos
+        self.menu = Gtk.Menu()
+
+        item = Gtk.MenuItem('Go to (0.0)')
+        item.connect('activate', lambda item: self.go_to(0, 0, True))
+        self.menu.append(item)
+
+        if not (ix, iy) in self.points:
+            item = Gtk.MenuItem('Make a point to (%d; %d)' % (ix, iy))
+            item.connect('activate', lambda item: self.add_point(ix, iy))
+
+        else:
+            item = Gtk.MenuItem('Remove point (%d; %d)' % (ix, iy))
+            item.connect('activate', lambda item: self.remove_point(ix, iy))
+
+        self.menu.append(item)
+
+        item = Gtk.MenuItem('Make a point to (%f; %f)' % (fx, fy))
+        self.menu.append(item)
+        self.menu.show_all()
+
+    def go_to(self, x, y, from_menu=True):
+        if from_menu:
+            self.unit_space = 50
+
+        self.init_x = x
+        self.init_y = y
+        GObject.idle_add(self.queue_draw)
+
     def add_function(self, function):
         if type(function) == str:
             function = Function(function)
@@ -124,12 +168,16 @@ class GraphArea(Gtk.DrawingArea):
         if function in self.functions:
             self.functions.remove(function)
 
-    def add_point(self, x, y):
+    def add_point(self, x, y, update=True):
         self.points.append((x, y))
+        if update:
+            GObject.idle_add(self.queue_draw)
 
-    def remove_point(self, x, y):
+    def remove_point(self, x, y, update=True):
         if (x, y) in self.points:
             self.points.remove((x, y))
+            if update:
+                GObject.idle_add(self.queue_draw)
 
     def render(self):
         self.render_background()
@@ -299,7 +347,7 @@ class GraphArea(Gtk.DrawingArea):
             #self.draw_curve(x4, y4, x2, y2, x, y)
             #self.draw_curve(x3, y3, x1, y1, x, y)
 
-    def draw_point(self, x, y):
+    def draw_point(self, x, y, color=None):
         x = self.width / 2.0 + self.init_x + (float(x) * self.unit_space)
         if x > self.init_x + self.width / 2.0:
             x += self.axis_width / 2.0
@@ -314,7 +362,13 @@ class GraphArea(Gtk.DrawingArea):
         elif y < self.init_y + self.height / 2.0:
             y -= self.axis_width / 2.0
 
-        self.context.set_source_rgb(*self.point_color)
+        if color is None:
+            color = self.point_color
+
+        if len(color) == 3:
+            color += (1.0,)
+
+        self.context.set_source_rgba(*color)
         self.context.arc(x, y, self.point_width, 0, 2 * G.PI)
         self.context.fill()
 

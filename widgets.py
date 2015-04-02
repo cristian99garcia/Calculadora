@@ -82,13 +82,14 @@ class GraphArea(Gtk.DrawingArea):
     def __scroll_event_cb(self, widget, event):
         scroll = event.get_scroll_direction()[1]
         if scroll == Gdk.ScrollDirection.UP:
-            if self.unit_space < 150:
+            if self.unit_space < 200:
                 self.unit_space += 10
 
         elif scroll == Gdk.ScrollDirection.DOWN:
             if self.unit_space > 20:
                 self.unit_space -= 10
 
+        self.font_size = self.unit_space / 2.0
         GObject.idle_add(self.queue_draw)
 
     def __button_press_event_cb(self, widget, event):
@@ -151,6 +152,7 @@ class GraphArea(Gtk.DrawingArea):
         y = self.height / 2.0 + self.init_y
 
         self.context.set_line_width(self.grid_width)
+        self.context.set_font_size(self.font_size)
 
         _x = x + self.axis_width / 2.0
         n = 0
@@ -161,7 +163,6 @@ class GraphArea(Gtk.DrawingArea):
             self.context.line_to(_x, self.height)
 
             self.context.set_source_rgb(*self.font_color)
-            self.context.set_font_size(self.font_size)
             self.context.move_to(_x - self.unit_space, self.height / 2.0 + self.init_y + self.unit_space / 2.0)
             self.context.show_text(str(n))
 
@@ -178,7 +179,6 @@ class GraphArea(Gtk.DrawingArea):
 
             if n != 0:
                 self.context.set_source_rgb(*self.font_color)
-                self.context.set_font_size(self.font_size)
                 self.context.move_to(_x + self.unit_space, self.height / 2.0 + self.init_y + self.unit_space / 2.0)
                 self.context.show_text('-' + str(n))
 
@@ -195,7 +195,6 @@ class GraphArea(Gtk.DrawingArea):
 
             if n != 0:
                 self.context.set_source_rgb(*self.font_color)
-                self.context.set_font_size(self.font_size)
                 self.context.move_to(self.width / 2.0 + self.init_x + self.font_size / 3.0, _y - self.unit_space / 2.0)
                 self.context.show_text('-' + str(n))
 
@@ -211,7 +210,6 @@ class GraphArea(Gtk.DrawingArea):
 
             if n != 0:
                 self.context.set_source_rgb(*self.font_color)
-                self.context.set_font_size(self.font_size)
                 self.context.move_to(self.width / 2.0 + self.init_x + self.font_size / 3.0, _y + self.unit_space * 3 / 2.0)
                 self.context.show_text(str(n))
 

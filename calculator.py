@@ -67,8 +67,12 @@ class Calculator(Gtk.Window):
         self.show_all()
 
     def calculate(self, entry):
-        expression = str(Expression(self.entry.get_text()))
-        self.entry.set_text('0' + expression if expression[0] == '.' else expression)
+        expression = Expression(self.entry.get_text())
+        string = str(expression)
+        self.entry.set_text('0' + string if string[0] == '.' else string)
+
+        if expression.is_function():
+            self.area.add_function(expression.obj)
 
     def make_buttons(self):
         grid = Gtk.Grid()

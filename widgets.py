@@ -107,8 +107,7 @@ class GraphArea(Gtk.DrawingArea):
         self.drag_point = None
 
     def __button_motion_event_cb(self, widget, event):
-        fx = (self.width / 2.0 + self.init_x - event.x) / -self.unit_space
-        fy = (self.height / 2.0 + self.init_y - event.y) / self.unit_space
+        fx, fy = self.get_symbolic_point(event.x, event.y)
         self.f_cursor_pos = (fx, fy)
         self.i_cursor_pos = (int(round(fx)), int(round(fy)))
 
@@ -146,32 +145,41 @@ class GraphArea(Gtk.DrawingArea):
         self.menu.append(item)
 
         item = Gtk.MenuItem('Make a point to (%f; %f)' % (fx, fy))
+        item.connect('activate', lambda item: self.add_point(fx, fy))
+
         self.menu.append(item)
         self.menu.show_all()
 
     def go_to(self, x, y, from_menu=True):
         if from_menu:
             self.unit_space = 50
+            self.font_size = 25.0
 
         self.init_x = x
         self.init_y = y
         GObject.idle_add(self.queue_draw)
 
-    def add_function(self, function):
+    def add_function(self, function, update=True):
         if type(function) == str:
             function = Function(function)
+            color = self.line_color
 
         if type(function) == Function:
             self.functions.append(function)
+            if update:
+                GObject.idle_add(self.queue_draw)
 
-    def remove_function(self, function):
+    def remove_function(self, function, update=True):
         if function in self.functions:
             self.functions.remove(function)
+            if update:
+                GObject.idle_add(self.queue_draw)
 
     def add_point(self, x, y, update=True):
-        self.points.append((x, y))
-        if update:
-            GObject.idle_add(self.queue_draw)
+        if not (x, y) in self.points:
+            self.points.append((x, y))
+            if update:
+                GObject.idle_add(self.queue_draw)
 
     def remove_point(self, x, y, update=True):
         if (x, y) in self.points:
@@ -204,7 +212,7 @@ class GraphArea(Gtk.DrawingArea):
 
         _x = x + self.axis_width / 2.0
         n = 0
-        while _x < self.width:
+        while _x < self.width + 2:
             _x += self.unit_space
             self.context.set_source_rgb(*self.grid_color)
             self.context.move_to(_x, 0)
@@ -276,36 +284,15 @@ class GraphArea(Gtk.DrawingArea):
         self.context.stroke()
 
     def render_graph(self, function):
+        color = function.color
         if function.degree in [0, 1]:
             # Draw a line
             # General expresion:
             #   ax + b
-            max_x = float(self.max_x)
-            max_y = float(function(max_x))
-            min_x = float(self.min_x)
-            min_y = float(function(min_x))
-            _x1 = 0
-            _y1 = 0
-            _x2 = 0
-            _y2 = 0
-            if max_x != 0:
-                _x1 = (self.grid_width * (-0.5 if min_x > 0 else 0.5)) + (self.line_width * (-0.5 if max_x > 0 else 0.5))
+            x1, y1 = self.get_real_point(float(self.max_x), float(function(self.max_x)))
+            x2, y2 = self.get_real_point(float(self.min_x), float(function(self.min_x)))
 
-            if max_y != 0:
-                _y1 = (self.grid_width * (-0.5 if min_y > 0 else 0.5)) + (self.line_width * (-0.5 if max_y > 0 else 0.5))
-
-            if min_x != 0:
-                _x2 = (self.grid_width * (-0.5 if min_x > 0 else 0.5)) + (self.line_width * (-0.5 if min_x > 0 else 0.5))
-
-            if min_y != 0:
-                _y2 = (self.grid_width * (-0.5 if min_y > 0 else 0.5)) + (self.line_width * (-0.5 if min_y > 0 else 0.5))
-
-            x1 = self.width / 2.0 + self.init_x + min_x * self.unit_space + _x1
-            y1 = self.height / 2.0 + self.init_y - min_y * self.unit_space + _y1
-            x2 = self.width / 2.0 + self.init_x + max_x * self.unit_space + _x2
-            y2 = self.height / 2.0 + self.init_y - max_y * self.unit_space + _y2
-
-            self.context.set_source_rgb(*self.line_color)
+            self.context.set_source_rgb(*color)
             self.context.set_line_width(self.line_width)
             self.context.move_to(x1, y1)
             self.context.line_to(x2, y2)
@@ -317,74 +304,103 @@ class GraphArea(Gtk.DrawingArea):
             # Draw a parable
             # General expresion:
             #   ax^2 + bx + c
-            monomials = function.polynomial.monomials
-            a = int(monomials[2][0].sign + str(monomials[2][0].coefficient))
-            b = int(monomials[1][0].sign + str(monomials[1][0].coefficient)) if 1 in monomials else 0
-            c = int(monomials[0][0].sign + str(monomials[0][0].coefficient)) if 0 in monomials else 0
 
-            # Vertex
-            x = -(b / 2.0 * a)
-            y = float(function(x))
-            self.draw_point(x, y)
+            a = function.get_coefficient(2)
+            b = function.get_coefficient(1)
+            c = function.get_coefficient(0)
 
-            #print(function(self.width / 2.0 / self.unit_space))
-            x1 = 1.0
-            y1 = float(function(x1))
-            x2 = -1.0
-            y2 = y1
-            x3 = 2.0
-            y3 = float(function(x3))
-            x4 = -2.0
-            y4 = y3
+            m = 1 if a >= 0 else -1
+            vx, vy = function.get_vertex()
 
-            # FIXME: NO FUNCIONAAAA, porque cairo acorta la distancia, sin pasar por todos los puntos especificados
-            self.draw_point(x1, y1)
-            self.draw_point(x2, y2)
-            self.draw_point(x3, y3)
-            self.draw_point(x4, y4)
+            self.context.set_line_width(self.line_width)
+            self.context.set_source_rgb(*function.color)
+            self.context.move_to(*self.get_real_point(*function.get_vertex()))
 
-            self.draw_curve(x3, y3, x, y, x4, y4)
-            #self.draw_curve(x4, y4, x2, y2, x, y)
-            #self.draw_curve(x3, y3, x1, y1, x, y)
+            n1 = self.min_x - 2
+            n2 = self.max_x + 2
 
-    def draw_point(self, x, y, color=None):
-        x = self.width / 2.0 + self.init_x + (float(x) * self.unit_space)
-        if x > self.init_x + self.width / 2.0:
-            x += self.axis_width / 2.0
+            self.context.move_to(*self.get_real_point(n1, function(n1)))
 
-        elif x < self.init_x + self.width / 2.0:
-            x -= self.axis_width / 2.0
+            for e in range(n1, n2):
+                for i in range(0, 11):
+                    x = e + (i * 0.1) - (abs(b) * m)
+                    y = function(x)
+                    _x, _y = self.get_real_point(x, y)
+                    if _y > -self.unit_space and _y < self.height + self.unit_space:
+                        self.context.line_to(_x, _y)
 
-        y = self.height / 2.0 + self.init_y - (float(y) * self.unit_space)
-        if y > self.init_y + self.height / 2.0:
-            y += self.axis_width / 2.0
+                    else:
+                        self.context.move_to(_x, _y)
 
-        elif y < self.init_y + self.height / 2.0:
-            y -= self.axis_width / 2.0
+            self.context.stroke()
 
+    def draw_point(self, x, y, color=None, size=None):
+        x, y = self.get_real_point(x, y)
         if color is None:
             color = self.point_color
 
         if len(color) == 3:
             color += (1.0,)
 
+        if not size:
+            size = self.point_width
+
         self.context.set_source_rgba(*color)
-        self.context.arc(x, y, self.point_width, 0, 2 * G.PI)
+        self.context.arc(x, y, size, 0, 2 * G.PI)
         self.context.fill()
 
-    def draw_curve(self, x1, y1, x2, y2, x3, y3):
-        """
-        x1 = self.width / 2.0 + x1 * self.unit_space
-        y1 = self.height / 2.0 - self.init_y - y1 * self.unit_space
-        x2 = self.width / 2.0 + x2 * self.unit_space
-        y2 = self.height / 2.0 - self.init_y - y2 * self.unit_space
-        x3 = self.width / 2.0 + x3 * self.unit_space
-        y3 = self.height / 2.0 - self.init_y - y3 * self.unit_space
+    def draw_curve(self, x1, y1, x2, y2, x3, y3, color=None, line_width=None):
+        x1, y1 = self.get_real_point(x1, y1)
+        x2, y2 = self.get_real_point(x2, y2)
+        x3, y3 = self.get_real_point(x3, y3)
 
-        #print(x1, y1, x2, y2, x3, y3)
+        if not color:
+            color = self.line_color
+
+        if not line_width:
+            line_width = self.line_width
+
+        self.context.set_source_rgb(*color)
+        self.context.set_line_width(self.line_width)
+
+        self.context.move_to(x1, y1)
         self.context.curve_to(x1, y1, x2, y2, x3, y3)
         self.context.stroke()
-        """
+
+    def get_real_point(self, x, y):
+        _x = x * self.unit_space
+        _x += self.width / 2.0
+        _x += self.init_x
+        if x != 0:
+            _x += self.axis_width / 2.0 if x > 0 else self.axis_width / - 2.0
+
+        _y = y * -self.unit_space
+        _y += self.height / 2.0
+        _y += self.init_y
+        if y != 0:
+            _y -= self.axis_width / 2.0 if y > 0 else self.axis_width / - 2.0
+
+        return (_x, _y)
+
+    def get_symbolic_point(self, x, y):
+        _x = x
+        _y = y
+
+        _x -= self.width / 2.0
+        _x -= self.init_x
+        if x != 0:
+            _x -= self.axis_width / 2.0 if x > 0 else self.axis_width / - 2.0
+        _x /= self.unit_space
+
+        _y -= self.height / 2.0
+        _y -= self.init_y
+        if y != 0:
+            _y -= self.axis_width / 2.0 if y > 0 else self.axis_width / - 2.0
+
+        _y /= -self.unit_space
+
+        return (_x, _y)
+
 
 class Entry(Gtk.ScrolledWindow):
 
@@ -605,51 +621,3 @@ class ButtonSpecial(ButtonBase):
             0.25098039215686274, 0.7411764705882353, 0.6196078431372549)
         self.insensitive_color = (0.35, 0.84, 0.72)
         self.background_color = self.mouse_out_color
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
-class Calculator(Gtk.VBox):
-
-    def __init__(self):
-        Gtk.VBox.__init__(self)
-
-        self.entry = Gtk.Entry()
-        self.entry.connect('changed', self.__text_changed_cb)
-        self.pack_start(self.entry, False, False, 2)
-
-    def __text_changed_cb(self, entry):
-        print(self.entry.get_text())
-
-
-win = Gtk.Window()
-calc = Calculator()
-#area = GraphArea('f(x) = 3x^2')
-
-win.connect('destroy', Gtk.main_quit)
-
-win.add(calc)
-win.show_all()
-
-Gtk.main()
-"""

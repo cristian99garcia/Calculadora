@@ -53,14 +53,7 @@ def clean_string(text):
 
 
 def square_root(number):
-    number = float(number)
-    root = number
-    i = 0
-    while i != root:
-        i = root
-        root = (number / root + root) / 2
-
-    return root
+    return(math.sqrt(abs(number)))
 
 
 def factorial(x):

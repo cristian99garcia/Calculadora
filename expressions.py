@@ -152,13 +152,18 @@ class Monomial(object):
                 self.coefficient = 1
 
             else:
-                sign = coefficient[0] if coefficient[0] in ['+', '-'] else '+'
-                coefficient = coefficient[1:] if coefficient[0] in ['+', '-'] else coefficient
-                try:
-                    self.coefficient = float(sign + coefficient)
-                except:
-                    self.coefficient = 0
-                    _repr = data
+                if coefficient in ['+', '-']:
+                    self.sign = coefficient
+                    self.coefficient = eval(self.sign + '1')
+
+                else:
+                    sign = coefficient[0] if coefficient[0] in ['+', '-'] else '+'
+                    coefficient = coefficient[1:] if coefficient[0] in ['+', '-'] else coefficient
+                    try:
+                        self.coefficient = float(sign + coefficient)
+                    except:
+                        self.coefficient = 0
+                        _repr = data
 
             try:
                 self.degree = float(data.split('^')[1].split('+')[0])
@@ -484,11 +489,14 @@ class Polynomial(object):
         self.monomials = {}
 
         for monomial in monomials:
+            monomial = Monomial(monomial)
             if monomial in ['+0', '-0', '0']:
                 continue
 
-            monomial = Monomial(monomial)
             if not monomial.degree in self.monomials:
+                if monomial.degree == int(monomial.degree):
+                    monomial.degree = int(monomial.degree)  # For evit 2.0 in degrees
+
                 self.monomials[monomial.degree] = []
 
             self.monomials[monomial.degree].append(monomial)
@@ -870,13 +878,13 @@ class Equation(object):
             x1 = (-b + root) / (2 * a)  # Positive root
             x2 = (-b - root) / (2 * a)  # Negative root
             self.repr_solution = '{(%f; %f)}' % (float(x1), float(x2))
-            return [float(x1), float(x2)]
+            return (float(x1), float(x2))
 
         # Incomplete equations
         elif 0 not in monomials and 1 not in monomials and 2 in monomials:
             # 2x^2 = 0
             self.repr_solution = '{(0, 0)}'
-            return [0, 0]
+            return (0, 0)
 
         elif 0 not in monomials and 1 in monomials and 2 in monomials:
             # x^2 - 5x = 0
@@ -888,25 +896,23 @@ class Equation(object):
             #   x = 5
             monomial = monomials[1][0]
             x1 = 0
-            x2 = -float('%s%d' % (monomial.sign, monomial.coefficient))
+            x2 = -float('%s%f' % (monomial.sign, monomial.coefficient))
             self.solution_repr = '%d; %d' % (x1, x2)
-            return [x1, x2]
+            return (x1, x2)
 
         elif 0 in monomials and 1 not in monomials and 2 in monomials:
-            # x^2 - 25 = 0
-            # x^2 = 25
-            # x = +- SquareRoot(25)
-            # x1 = 5
-            # x2 = -5
+            # 2x^2 - 2 = 0
+            # 2x^2 = 2
+            # x^2 = 1
+            # x1 = 1
+            # x2 = -1
             monomial1 = monomials[2][0]
             monomial2 = monomials[0][0]
-            if monomial1.sign == monomial2.sign:
-                self.repr_solution = 'Ø'
-                return None
 
-            root = G.square_root(monomial2.coefficient)
-            self.repr = '{(%f, %f)}' % (float(root), float(-root))
-            return [root, -root]
+            number = abs(monomial2.coefficient / monomial1.coefficient)
+            root = G.square_root(number)
+            self.solution_repr = '{(%f, %f)}' % (float(root), float(-root))
+            return (root, -root)
 
         return None
 
@@ -934,6 +940,7 @@ class Function(object):
         self.repr = 'f(x) = %s' % _repr
         self.degree = self.polynomial.get_max_degree()
         self.independent_term = 0
+        self.color = (0, 0, 1)
 
         if 0 in self.polynomial.monomials:
             monomial = self.polynomial.monomials[0][0]
@@ -941,9 +948,61 @@ class Function(object):
             if monomial.sign == '-':
                 self.independent_term *= -1
 
-    def to_graph(self):
-        if self.degree == 1:
-            pass
+    def get_x(self, y):
+        equation = Equation(self.polynomial.repr + '=' + str(y))
+        solution = equation.solve()
+
+        return(solution)
+
+    def get_coefficient(self, degree=None):
+        if degree is None:
+            degree = self.polynomial.get_max_degree()
+
+        if degree in self.polynomial.monomials:
+            monomial = self.polynomial.monomials[degree][0]
+            number = float(monomial.sign + str(monomial.coefficient))
+            return number
+
+        else:
+            return 0
+
+    def get_vertex(self):
+        if self.polynomial.get_max_degree() < 2:
+            return
+
+        monomials = self.polynomial.monomials
+        a = self.get_coefficient()
+        b = self.get_coefficient(1)
+        c = self.get_coefficient(0)
+        if 1 in monomials:
+            b = float(monomials[1][0].sign + str(monomials[1][0].coefficient))
+        else:
+            b = 0
+
+        if 0 in monomials:
+            c = float(monomials[0][0].sign + str(monomials[0][0].coefficient))
+        else:
+            c = 0
+
+        Vx = float(-(b / 2.0 * a))
+        if Vx == 0:  # For evit (-0.0; -0.0)
+            Vx = 0
+        Vy = self(Vx)
+
+        return(Vx, Vy)
+
+    def get_axis_of_symmetry(self):
+        if self.polynomial.get_max_degree() != 2:
+            return
+
+        monomials = self.polynomial.monomials
+        a = self.get_a()
+
+    def get_y_intercept(self):
+        return self(0)
+
+    def get_x_intercepts(self):
+        return self.get_x(0)
 
     def __repr__(self):
         return self.repr
@@ -951,10 +1010,18 @@ class Function(object):
     def __call__(self, value=0):
         _repr = self.polynomial.repr.replace('^', '**')
         for x in range(0, 10):
-            _repr = _repr.replace('%dx' % x, '%d*x' % x)
+            # Remplaces number [0-9]x to [0-9]*x
+            # 1x -- > 1*x
+            # 2x -- > 2*x ...
+            _repr = _repr.replace('%dx' % x, '(%d*x)' % x)
 
         _repr = _repr.replace('x', str(value))
-        return float(eval(_repr))
+        _float = float(eval(_repr))
+
+        if _float == 0:
+            _float = 0.0 # For evit -0.0
+
+        return _float
 
 
 class Expression(object):

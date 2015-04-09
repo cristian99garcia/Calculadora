@@ -25,7 +25,7 @@ from gi.repository import Gdk
 from expressions import Expression
 
 from widgets import Entry
-from widgets import GraphArea
+from widgets import GraphManager
 from widgets import ButtonSimple
 from widgets import ButtonOperator
 from widgets import ButtonSpecial
@@ -72,7 +72,7 @@ class Calculator(Gtk.Window):
         self.entry.set_text('0' + string if string[0] == '.' else string)
 
         if expression.is_function():
-            self.area.add_function(expression.obj)
+            self.grapher.add_function(expression.obj)
 
     def make_buttons(self):
         grid = Gtk.Grid()
@@ -166,10 +166,10 @@ class Calculator(Gtk.Window):
         buttonbox.add(button1)
         buttonbox.add(button2)
 
-        self.area = GraphArea()
+        self.grapher = GraphManager()
 
         vbox = Gtk.VBox()
-        vbox.add(self.area)
+        vbox.add(self.grapher)
 
         self.stack.add_titled(vbox, 'graph', 'Graph')
 

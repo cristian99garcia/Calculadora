@@ -18,6 +18,7 @@
 # Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 import math
+from gi.repository import Gdk
 
 PI = 3.141592653589793238462643383279502884196406286208998628034825342117067982
 
@@ -151,3 +152,44 @@ def simplify(data):
         final += ('+' if not x[0] in ['+', '-'] else '') + x
 
     return str(eval(final))
+
+
+
+def color_hex_to_cairo(color):
+    if color[0] == '#':
+        color = color[1:]
+
+    (r, g, b) = (int(color[:2], 16),
+                 int(color[2:4], 16),
+                 int(color[4:], 16))
+
+    return color_rgb_to_cairo((r, g, b))
+
+
+def color_cairo_to_hex(color):
+    r, g, b = color_cairo_to_rgb(color)
+    r = hex(r)[2:]
+    g = hex(g)[2:]
+    b = hex(b)[2:]
+
+    r = ('0' + r) if len(r) != 2 else r
+    g = ('0' + g) if len(g) != 2 else g
+    b = ('0' + b) if len(b) != 2 else b
+
+    return '#' + r + g + b
+
+
+def color_rgb_to_cairo(color):
+    return (color[0] / 255.0, color[1] / 255.0, color[2] / 255.0)
+
+
+def color_cairo_to_rgb(color):
+    return (color[0] * 255, color[1] * 255, color[2] * 255)
+
+
+def color_cairo_to_gdk(color):
+    return Gdk.Color(color[0] * 65535, color[1] * 65535, color[2] * 65535)
+
+
+def color_gdk_to_cairo(color):
+    return (color.red / 65535.0, color.green / 65535.0, color.blue / 65535.0)

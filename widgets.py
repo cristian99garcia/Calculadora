@@ -326,7 +326,7 @@ class GraphArea(Gtk.DrawingArea):
                     x = e + (i * 0.1) - (abs(b) * m)
                     y = function(x)
                     _x, _y = self.get_real_point(x, y)
-                    if _y > -self.unit_space and _y < self.height + self.unit_space:
+                    if _y > self.unit_space * -2 and _y < self.height + self.unit_space * 2:
                         self.context.line_to(_x, _y)
 
                     else:
@@ -400,6 +400,71 @@ class GraphArea(Gtk.DrawingArea):
         _y /= -self.unit_space
 
         return (_x, _y)
+
+
+class GraphList(Gtk.ScrolledWindow):
+
+    __gsignals__ = {
+        'update-request': (GObject.SIGNAL_RUN_FIRST, None, [])
+    }
+
+    def __init__(self):
+        Gtk.ScrolledWindow.__init__(self)
+
+        self.listbox = Gtk.ListBox()
+        self.add(self.listbox)
+        self.set_size_request(200, -1)
+
+    def add_function(self, function):
+        color = G.color_cairo_to_gdk(function.color)
+
+        row = Gtk.ListBoxRow()
+        self.listbox.add(row)
+
+        hbox = Gtk.HBox()
+        row.add(hbox)
+
+        label = Gtk.Label(function.polynomial.repr)
+        label.modify_fg(Gtk.StateType.NORMAL, color)
+        hbox.pack_start(label, False, False, 0)
+
+        image = Gtk.Image.new_from_stock(Gtk.STOCK_REMOVE, Gtk.IconSize.BUTTON)
+        button = Gtk.Button(image=image)
+        hbox.pack_end(button, False, False, 10)
+
+        button = Gtk.ColorButton()
+        button.set_color(color)
+        button.connect('color-set', self.choice_color, function)
+        hbox.pack_end(button, False, False, 0)
+
+        self.show_all()
+
+    def choice_color(self, color, function):
+        if type(color) == Gtk.ColorButton:
+            color = G.color_gdk_to_cairo(color.get_color())
+
+        function.color = color
+
+
+class GraphManager(Gtk.HBox):
+
+    def __init__(self):
+        Gtk.HBox.__init__(self)
+
+        self.area = GraphArea()
+        self.list = GraphList()
+
+        self.list.connect('update-request', self.update_request)
+
+        self.pack_start(self.area, True, True, 0)
+        self.pack_end(self.list, False, False, 0)
+
+    def add_function(self, function):
+        self.area.add_function(function)
+        self.list.add_function(function)
+
+    def update_request(self, *args):
+        self.area.queue_draw()
 
 
 class Entry(Gtk.ScrolledWindow):

@@ -1008,12 +1008,14 @@ class Function(object):
         return self.repr
 
     def __call__(self, value=0):
-        _repr = self.polynomial.repr.replace('^', '**')
+        _repr = G.clean_string(self.polynomial.repr)
         for x in range(0, 10):
             # Remplaces number [0-9]x to [0-9]*x
             # 1x -- > 1*x
             # 2x -- > 2*x ...
             _repr = _repr.replace('%dx' % x, '(%d*x)' % x)
+            _repr = _repr.replace('%d(' % x, '%d*(' % x)
+            _repr = _repr.replace(')%d' % x, ')*%d' % x)
 
         _repr = _repr.replace('x', str(value))
         _float = float(eval(_repr))
@@ -1031,23 +1033,18 @@ class Expression(object):
     """
 
     def __init__(self, data):
-        if type(data) in [Monomial, Polynomial, Equation, Function]:
-            data = data.repr
-
-        elif type(data) in [int, float]:
+        if type(data) in [int, float, Monomial, Polynomial, Equation, Function]:
             data = str(data)
 
         if type(data) != str:
             raise TypeError('Type unknown')
 
+        data = G.clean_string(data)
         if not 'x' in data:
             try:
-                data = G.simplify(data)
+                data = G.simplify(data, clean=False)
             except:
                 raise SyntaxError('Bad string, "%s"' % data)
-
-        else:
-            data = G.clean_string(data)
 
         if '=' in data:
             if data.startswith('f(x)'):

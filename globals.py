@@ -50,6 +50,10 @@ def clean_string(text):
     for expression in EXPRESSIONS:
         text = text.replace(expression[1], expression[0])
 
+    for x in range(0, 10):
+        text = text.replace('%d(' % x, '%d*(' % x)
+        text = text.replace(')%d' % x, ')*%d' % x)
+
     return text
 
 
@@ -112,13 +116,17 @@ def log(x):
     return math.log(x)
 
 
-def simplify(data):
-    data = clean_string(data)
+def simplify(data, clean=True):
+    if clean:
+        data = clean_string(data)
+
     data = data.replace('+', 'SPLIT+')
     data = data.replace('-', 'SPLIT-')
+    data = data.replace('(SPLIT', '(')
     _monomials = data.split('SPLIT')
     monomials = []
     final = ''
+
     for monomial in _monomials:
         if not monomial:
             continue
@@ -133,7 +141,7 @@ def simplify(data):
                 n = -1
                 number = ''
                 while True:
-                    if not _number[n].isalnum():
+                    if not _number[n].isalnum() and _number.strip() not in ['', '(']:
                         break
 
                     number = _number[n] + number

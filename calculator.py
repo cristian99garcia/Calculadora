@@ -67,6 +67,9 @@ class Calculator(Gtk.Window):
         self.show_all()
 
     def calculate(self, entry):
+        if not self.entry.get_text():
+            return
+
         expression = Expression(self.entry.get_text())
         string = str(expression)
         self.entry.set_text('0' + string if string[0] == '.' else string)
@@ -124,7 +127,7 @@ class Calculator(Gtk.Window):
         buttons = [['sen', 'cos', 'tan', 'In'],
                    ['log', '!', 'PI', 'e'],
                    ['^', '(', ')', 'V'],
-                   ['¡', '%', 'x', 'f(x) = ']]
+                   ['%', 'x', 'y', 'f(x) = ']]
 
         n_row = 0
         for row in buttons:

@@ -483,7 +483,7 @@ class GraphManager(Gtk.HBox):
         self.area.queue_draw()
 
 
-class Entry(Gtk.ScrolledWindow):
+class Entry(Gtk.HBox):
 
     __gsignals__ = {
         'activate': (GObject.SIGNAL_RUN_FIRST, None, []),
@@ -493,10 +493,18 @@ class Entry(Gtk.ScrolledWindow):
     __gtype_name__ = 'Entry'
 
     def __init__(self, sugar=False):
-        Gtk.ScrolledWindow.__init__(self)
+        Gtk.HBox.__init__(self)
 
+        self.__scrolled = Gtk.ScrolledWindow()
         self.__view = Gtk.TextView()
+
         self.__buffer = self.__view.get_buffer()
+        self.__buffer.connect('changed', self.__changed_cb)
+
+        self.__button = ButtonBase(G.SYMBOL_OK)
+        self.__button.label_color = (0, 1, 0)
+        self.__button.set_size_request(40, -1)
+        self.__button.connect('clicked', self.__activate_from_button)
 
         font = 'Bold 25' if not sugar else 'Bold 60'
         size = 45 if not sugar else 100
@@ -508,10 +516,12 @@ class Entry(Gtk.ScrolledWindow):
 
         self.set_size_request(-1, size)
         self.add_events(Gdk.EventMask.KEY_RELEASE_MASK)
-        self.connect('key-release-event', self.__key_release_event_cb)
-        self.__buffer.connect('changed', self.__changed_cb)
 
-        self.add(self.__view)
+        self.connect('key-release-event', self.__key_release_event_cb)
+
+        self.__scrolled.add(self.__view)
+        self.pack_start(self.__scrolled, True, True, 1)
+        self.pack_end(self.__button, False, False, 1)
 
     def __key_release_event_cb(self, textview, event):
         if event.keyval == 65293:  # 65293 = Enter
@@ -521,6 +531,9 @@ class Entry(Gtk.ScrolledWindow):
 
     def __changed_cb(self, buffer):
         self.emit('changed')
+
+    def __activate_from_button(self, button):
+        self.emit('activate')
 
     def set_text(self, texto):
         self.__buffer.set_text(texto)

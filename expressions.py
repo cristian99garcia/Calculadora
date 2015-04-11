@@ -210,8 +210,7 @@ class Monomial(object):
 
         elif not 'x' in data:
             _repr = str(data)
-            if '^' in data:
-                data = data.replace('^', '**')
+            data = G.clean_string(data)
 
             try:
                 self.coefficient = float(eval(data))
@@ -948,6 +947,15 @@ class Function(object):
             if polynomial.startswith('f(x) = '):
                 polynomial = polynomial[7:]
 
+            elif polynomial.startswith('f(x)='):
+                polynomial = polynomial[5:]
+
+            elif polynomial.startswith('y = '):
+                polynomial = polynomial[4:]
+
+            elif polynomial.startswith('y='):
+                polynomial = polynomial[2:]
+
             _repr = polynomial
             self.polynomial = Polynomial(polynomial)
 
@@ -1065,7 +1073,7 @@ class Expression(object):
                 raise SyntaxError('Bad string, "%s"' % data)
 
         if '=' in data:
-            if data.startswith('f(x)'):
+            if data.startswith('f(x)') or data.replace(' ', '').startswith('y='):
                 self.obj = Function(data)
                 self.repr = self.obj.repr
 

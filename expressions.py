@@ -1067,10 +1067,10 @@ class Expression(object):
 
         data = G.clean_string(data)
         if not 'x' in data:
-            try:
-                data = G.simplify(data, clean=False)
-            except:
-                raise SyntaxError('Bad string, "%s"' % data)
+            #try:
+            data = G.simplify(data, clean=False)
+            #except:
+            #    raise SyntaxError('Bad string, "%s"' % data)
 
         if '=' in data:
             if data.startswith('f(x)') or data.replace(' ', '').startswith('y='):

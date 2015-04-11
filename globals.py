@@ -44,7 +44,7 @@ OPERATORS = [OPERATOR_DIV,
              OPERATOR_SUB]
 
 SPECIAL_FUNCTIONS = ['sin', 'cos', 'tan', 'In', 'log', 'factorial']
-SPECIAL_OPERATORS = {'!': 'factorial'}
+SPECIAL_OPERATORS = {'!': 'factorial', SYMBOL_SQUARE_ROOT: 'square_root'}
 
 
 def clean_string(text):
@@ -135,24 +135,43 @@ def simplify(data, clean=True):
 
         has_operator = False
 
-        if monomial.startswith(SYMBOL_SQUARE_ROOT):
-            monomial = str(square_root(float(monomial[1:])))
-
         for operator in list(SPECIAL_OPERATORS.keys()):
             if operator in monomial:
                 has_operator = True
 
-                _number = monomial.split(operator)[0]
-                n = -1
-                number = ''
-                while True:
-                    if not _number[n].isalnum() and _number.strip() not in ['', '(']:
-                        break
+                if monomial.startswith(operator):
+                    _number = monomial.split(operator)[1]
 
-                    number = _number[n] + number
-                    n -= 1
+                    n = 0
+                    number = ''
+                    while True:
+                        if not _number[n].isalnum() and _number.strip() not in ['', '(']:
+                            continue
 
-                monomials.append(monomial.replace(number + operator, str(eval('%s(%s)' % (SPECIAL_OPERATORS[operator], number)))))
+                        number = _number[n] + number
+                        n += 1
+
+                        if n == len(_number):
+                            break
+
+                    monomials.append(monomial.replace(operator + number, str(eval('%s(%s)' % (SPECIAL_OPERATORS[operator], number)))))
+
+                elif monomial.endswith(operator):
+                    _number = monomial.split(operator)[0]
+
+                    n = -1
+                    number = ''
+                    while True:
+                        if not _number[n].isalnum() and _number.strip() not in ['', '(']:
+                            continue
+
+                        number = _number[n] + number
+                        n -= 1
+
+                        if -n == len(_number) + 1:
+                            break
+
+                    monomials.append(monomial.replace(number + operator, str(eval('%s(%s)' % (SPECIAL_OPERATORS[operator], number)))))
 
         if not has_operator:
             monomials.append(str(eval(monomial)))

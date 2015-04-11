@@ -173,7 +173,25 @@ class Monomial(object):
             self.literal_part = 'x^' + str(self.degree)
 
         elif 'x' in data and not '^' in data:
-            coefficient = data.split('x')[0]
+            _degree = None
+            _literal_part = None
+            if '*' in data:
+                data1, data2 = data.split('*')
+                if not 'x' in data1:
+                    coefficient = data1
+
+                elif not 'x' in data2:
+                    coefficient = data2
+
+                elif data1.strip() == 'x' and data2.strip() == 'x':
+                    data = 'x^2'
+                    coefficient = '1'
+                    _degree = 2
+                    _literal_part = 'x ^ 2'
+
+            else:
+                coefficient = data.split('x')[0]
+
             if coefficient and coefficient[0] in ['+', '-']:
                 sign = coefficient[0]
                 coefficient = coefficient[1:]
@@ -187,8 +205,8 @@ class Monomial(object):
             else:
                 self.coefficient = float(sign + '1')
 
-            self.degree = 1
-            self.literal_part = 'x'
+            self.degree = 1 if _degree is None else _degree
+            self.literal_part = 'x' if _literal_part is None else _literal_part
 
         elif not 'x' in data:
             _repr = str(data)

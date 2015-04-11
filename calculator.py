@@ -126,7 +126,7 @@ class Calculator(Gtk.Window):
 
         buttons = [['sen', 'cos', 'tan', 'In'],
                    ['log', '!', 'PI', 'e'],
-                   ['^', '(', ')', 'V'],
+                   ['^', '(', ')', G.SYMBOL_SQUARE_ROOT],
                    ['%', 'x', 'y', 'f(x) = ']]
 
         n_row = 0

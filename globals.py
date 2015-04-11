@@ -135,6 +135,9 @@ def simplify(data, clean=True):
 
         has_operator = False
 
+        if monomial.startswith(SYMBOL_SQUARE_ROOT):
+            monomial = str(square_root(float(monomial[1:])))
+
         for operator in list(SPECIAL_OPERATORS.keys()):
             if operator in monomial:
                 has_operator = True

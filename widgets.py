@@ -405,11 +405,14 @@ class GraphArea(Gtk.DrawingArea):
 class GraphList(Gtk.ScrolledWindow):
 
     __gsignals__ = {
-        'update-request': (GObject.SIGNAL_RUN_FIRST, None, [])
+        'remove-function': (GObject.SIGNAL_RUN_FIRST, None, [object]),
+        'update-request': (GObject.SIGNAL_RUN_FIRST, None, []),
     }
 
     def __init__(self):
         Gtk.ScrolledWindow.__init__(self)
+
+        self.rows = {}
 
         self.listbox = Gtk.ListBox()
         self.add(self.listbox)
@@ -419,6 +422,7 @@ class GraphList(Gtk.ScrolledWindow):
         color = G.color_cairo_to_gdk(function.color)
 
         row = Gtk.ListBoxRow()
+        self.rows[function] = row
         self.listbox.add(row)
 
         hbox = Gtk.HBox()
@@ -430,6 +434,7 @@ class GraphList(Gtk.ScrolledWindow):
 
         image = Gtk.Image.new_from_stock(Gtk.STOCK_REMOVE, Gtk.IconSize.BUTTON)
         button = Gtk.Button(image=image)
+        button.connect('clicked', self._remove_function, function)
         hbox.pack_end(button, False, False, 10)
 
         button = Gtk.ColorButton()
@@ -438,6 +443,12 @@ class GraphList(Gtk.ScrolledWindow):
         hbox.pack_end(button, False, False, 0)
 
         self.show_all()
+
+    def remove_function(self, function):
+        self.listbox.remove(self.rows[function])
+
+    def _remove_function(self, button, function):
+        self.emit('remove-function', function)
 
     def choice_color(self, color, function):
         if type(color) == Gtk.ColorButton:
@@ -454,6 +465,7 @@ class GraphManager(Gtk.HBox):
         self.area = GraphArea()
         self.list = GraphList()
 
+        self.list.connect('remove-function', lambda w, f: self.remove_function(f))
         self.list.connect('update-request', self.update_request)
 
         self.pack_start(self.area, True, True, 0)
@@ -462,6 +474,10 @@ class GraphManager(Gtk.HBox):
     def add_function(self, function):
         self.area.add_function(function)
         self.list.add_function(function)
+
+    def remove_function(self, function):
+        self.area.remove_function(function)
+        self.list.remove_function(function)
 
     def update_request(self, *args):
         self.area.queue_draw()
